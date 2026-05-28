@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeGraph Explorer - Interactive Code Knowledge Graph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>CodeGraph Explorer</span>
+            </div>
+            <div class="header-actions">
+                <button id="importBtn" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Import
+                </button>
+                <button id="exportBtn" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Export
+                </button>
+                <button id="settingsBtn" class="btn btn-icon">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="panel">
+                    <h3><i class="fas fa-layer-group"></i> Layout</h3>
+                    <div class="layout-options">
+                        <button class="layout-btn active" data-layout="force">
+                            <i class="fas fa-atom"></i> Force
+                        </button>
+                        <button class="layout-btn" data-layout="hierarchical">
+                            <i class="fas fa-sitemap"></i> Tree
+                        </button>
+                        <button class="layout-btn" data-layout="circular">
+                            <i class="fas fa-circle"></i> Circle
+                        </button>
+                        <button class="layout-btn" data-layout="grid">
+                            <i class="fas fa-th"></i> Grid
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-sliders-h"></i> Settings</h3>
+                    <div class="setting-item">
+                        <label>Node Size</label>
+                        <input type="range" id="nodeSize" min="10" max="50" value="25">
+                    </div>
+                    <div class="setting-item">
+                        <label>Link Distance</label>
+                        <input type="range" id="linkDistance" min="50" max="300" value="100">
+                    </div>
+                    <div class="setting-item">
+                        <label>Charge Strength</label>
+                        <input type="range" id="chargeStrength" min="-1000" max="-50" value="-300">
+                    </div>
+                    <div class="setting-item">
+                        <label>Show Labels</label>
+                        <input type="checkbox" id="showLabels" checked>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-filter"></i> Filter</h3>
+                    <div class="filter-list">
+                        <label class="filter-item">
+                            <input type="checkbox" checked data-type="file">
+                            <span class="color-dot" style="background: #4CAF50;"></span>
+                            Files
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" checked data-type="function">
+                            <span class="color-dot" style="background: #2196F3;"></span>
+                            Functions
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" checked data-type="class">
+                            <span class="color-dot" style="background: #FF9800;"></span>
+                            Classes
+                        </label>
+                        <label class="filter-item">
+                            <input type="checkbox" checked data-type="import">
+                            <span class="color-dot" style="background: #9C27B0;"></span>
+                            Imports
+                        </label>
+                    </div>
+                </div>
+
+                <div class="panel stats-panel">
+                    <h3><i class="fas fa-chart-bar"></i> Statistics</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Nodes:</span>
+                        <span id="nodeCount" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Links:</span>
+                        <span id="linkCount" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Components:</span>
+                        <span id="componentCount" class="stat-value">0</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Graph Container -->
+            <main class="graph-container">
+                <div id="graph"></div>
+                <div class="graph-controls">
+                    <button id="zoomIn" class="control-btn"><i class="fas fa-plus"></i></button>
+                    <button id="zoomOut" class="control-btn"><i class="fas fa-minus"></i></button>
+                    <button id="fitView" class="control-btn"><i class="fas fa-compress-arrows-alt"></i></button>
+                    <button id="resetView" class="control-btn"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search nodes...">
+                </div>
+            </main>
+
+            <!-- Node Details Panel -->
+            <aside class="details-panel" id="detailsPanel">
+                <div class="details-header">
+                    <h3><i class="fas fa-info-circle"></i> Node Details</h3>
+                    <button id="closeDetails" class="btn-icon"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="details-content" id="detailsContent">
+                    <p class="empty-state">Select a node to view details</p>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-upload"></i> Import Data</h3>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="import-tabs">
+                    <button class="tab-btn active" data-tab="json">JSON</button>
+                    <button class="tab-btn" data-tab="github">GitHub URL</button>
+                    <button class="tab-btn" data-tab="sample">Sample</button>
+                </div>
+                <div class="tab-content active" id="jsonTab">
+                    <textarea id="jsonInput" placeholder='Paste your JSON data here...
+{
+  "nodes": [{"id": "1", "name": "main.js", "type": "file"}],
+  "links": [{"source": "1", "target": "2", "type": "import"}]
+}'></textarea>
+                    <input type="file" id="jsonFile" accept=".json" hidden>
+                    <button id="loadJsonFile" class="btn btn-secondary">
+                        <i class="fas fa-file"></i> Load from File
+                    </button>
+                </div>
+                <div class="tab-content" id="githubTab">
+                    <input type="text" id="githubUrl" placeholder="https://github.com/username/repo">
+                    <p class="hint">⚠️ Note: GitHub API has rate limits. For private repos, you'll need a token.</p>
+                    <button id="analyzeGithub" class="btn btn-primary">
+                        <i class="fas fa-code-branch"></i> Analyze
+                    </button>
+                </div>
+                <div class="tab-content" id="sampleTab">
+                    <p>Load a sample graph to explore features:</p>
+                    <div class="sample-options">
+                        <button class="sample-btn" data-sample="simple">Simple Graph</button>
+                        <button class="sample-btn" data-sample="complex">Complex Project</button>
+                        <button class="sample-btn" data-sample="tree">Tree Structure</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmImport" class="btn btn-primary">Import</button>
+                <button class="btn btn-secondary modal-close">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-download"></i> Export</h3>
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <button class="export-btn" data-format="png">
+                        <i class="fas fa-image"></i>
+                        <span>PNG Image</span>
+                    </button>
+                    <button class="export-btn" data-format="svg">
+                        <i class="fas fa-vector-square"></i>
+                        <span>SVG Vector</span>
+                    </button>
+                    <button class="export-btn" data-format="json">
+                        <i class="fas fa-code"></i>
+                        <span>JSON Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="graph.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
